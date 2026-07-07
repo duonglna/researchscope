@@ -546,11 +546,172 @@ function renderReview() {
   }
   html += '</div></div>';
 
+  // Research Directions button
+  html += `
+  <button class="gen-btn" onclick="generateDirections()" id="dirBtn" style="margin-top:16px;background:var(--green);">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    🎯 Suggest Research Directions
+  </button>
+  <div id="directionsOutput"></div>`;
+
   reviewDiv.innerHTML = html;
   reviewDiv.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function toast(msg) {
+async function generateDirections() {
+  if (papers.length === 0) return toast('No papers to analyze');
+  const btn = document.getElementById('dirBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;margin:0;"></span> Analyzing research gaps…';
+
+  const dirDiv = document.getElementById('directionsOutput');
+  dirDiv.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>AI is identifying research opportunities…</p></div>';
+
+  try {
+    const resp = await fetch('https://researchscope.netlify.app/.netlify/functions/research-directions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        topic: document.getElementById('topicInput').value.trim(),
+        papers: papers.map(p => ({
+          title:p.title, summary:p.summary,
+          authors: p.authors, year:p.published, source:p.source
+        })).slice(0, 15),
+        review: reviewContent
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      directionsContent = data.directions;
+      renderDirections();
+    } else {
+      throw new Error('Backend unavailable');
+    }
+  } catch(e) {
+    // Fallback: template-based directions
+    directionsContent = generateFallbackDirections();
+    renderDirections();
+  }
+
+  btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 🎯 Regenerate Directions';
+  btn.disabled = false;
+}
+
+function generateFallbackDirections() {
+  const topic = document.getElementById('topicInput').value.trim();
+  const keywords = extractKeywords(papers.slice(0, 10));
+  const themes = keywords.themes.slice(0, 5);
+  
+  return `## 🎯 Research Directions
+
+### 1. Cross-Modal ${themes[0] || 'Integration'} Framework
+- **Gap**: Current approaches focus on single-modality processing
+- **Approach**: Develop a unified framework combining ${themes.slice(0,3).join(', ')} techniques
+- **Novelty**: First comprehensive cross-modal approach in this domain
+- **Difficulty**: Medium
+- **Timeline**: 4-6 months
+
+### 2. Efficient ${themes[1] || 'Model'} for Edge Deployment
+- **Gap**: Most methods are computationally expensive for real-world deployment
+- **Approach**: Knowledge distillation + quantization for mobile/edge devices
+- **Novelty**: Domain-specific compression with minimal accuracy loss
+- **Difficulty**: Easy-Medium
+- **Timeline**: 3-4 months
+
+### 3. Robustness Analysis of ${themes[0] || 'Recent'} Methods
+- **Gap**: Limited evaluation on adversarial/out-of-distribution data
+- **Approach**: Comprehensive robustness benchmark with diverse perturbation types
+- **Novelty**: First systematic robustness study in this area
+- **Difficulty**: Medium
+- **Timeline**: 4-5 months
+
+### 4. Few-Shot Adaptation via ${themes[2] || 'Meta-Learning'}
+- **Gap**: Most methods require large labeled datasets per domain
+- **Approach**: Meta-learning with domain-specific prompt tuning
+- **Novelty**: Combines meta-learning with recent prompt-based methods
+- **Difficulty**: Hard
+- **Timeline**: 6-8 months
+
+## 📝 Paper Writing Roadmap
+
+### Phase 1: Preparation (Week 1-2)
+- Deep-read top 5 papers from this review (focus on Methods & Gaps sections)
+- Formulate specific research question: "How can we [address gap X] using [approach Y]?"
+- Define hypothesis and success metrics
+
+### Phase 2: Methodology (Week 3-4)
+- Design experiments comparing against 3-5 baselines from reviewed papers
+- Select datasets mentioned in the literature
+- Implement baseline reproductions
+
+### Phase 3: Execution (Week 5-8)
+- Run ablation studies
+- Document all experiments with W&B or similar
+- Prepare preliminary results for advisor feedback
+
+### Phase 4: Writing (Week 9-11)
+- **Introduction**: Motivate the problem with real-world examples
+- **Related Work**: Cite papers from this review (organized by theme)
+- **Method**: Clear algorithm description with figures
+- **Experiments**: Tables comparing SOTA, ablation results
+- **Conclusion**: Contributions + future directions
+
+### Phase 5: Submission (Week 12)
+- Target venues: ACL, NeurIPS, EMNLP, ICLR (check deadlines)
+- Checklist: reproducibility, ethics statement, code availability
+- Have 2-3 colleagues review before submission`;
+}
+
+function renderDirections() {
+  const dirDiv = document.getElementById('directionsOutput');
+  if (!directionsContent) { dirDiv.innerHTML=''; return; }
+
+  let html = '<div class="review-panel" style="margin-top:20px;"><div class="review-header"><h2>🎯 Research Directions & Roadmap</h2><span class="review-badge" style="background:rgba(45,212,168,0.2);color:var(--green);">AI-Generated</span></div>';
+
+  const lines = directionsContent.split('\n');
+  let inDirections = false;
+  let inRoadmap = false;
+
+  for (let line of lines) {
+    if (line.startsWith('## 🎯') || line.startsWith('## Research Directions')) {
+      html += '<div class="review-section"><h3 style="color:var(--green);">🎯 Research Directions</h3>';
+      inDirections = true;
+      inRoadmap = false;
+    } else if (line.startsWith('## 📝') || line.startsWith('## Paper Writing')) {
+      html += '</div><div class="review-section"><h3 style="color:var(--orange);">📝 Paper Writing Roadmap</h3>';
+      inDirections = false;
+      inRoadmap = true;
+    } else if (line.startsWith('### Phase')) {
+      html += `<h4 style="color:var(--accent);font-weight:700;margin-top:18px;margin-bottom:8px;font-size:15px;">${line.slice(4)}</h4>`;
+    } else if (line.startsWith('### ')) {
+      html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin:10px 0;">
+        <h4 style="color:var(--text);font-weight:700;margin-bottom:8px;font-size:15px;">${line.slice(4)}</h4>`;
+    } else if (line.startsWith('- **Gap**:')) {
+      html += `<p style="font-size:13px;color:var(--red);line-height:1.6;margin-bottom:4px;">${line}</p>`;
+    } else if (line.startsWith('- **Approach**:')) {
+      html += `<p style="font-size:13px;color:var(--blue);line-height:1.6;margin-bottom:4px;">${line}</p>`;
+    } else if (line.startsWith('- **Novelty**:')) {
+      html += `<p style="font-size:13px;color:var(--green);line-height:1.6;margin-bottom:4px;">${line}</p>`;
+    } else if (line.startsWith('- **Difficulty**:')) {
+      html += `<p style="font-size:13px;color:var(--orange);line-height:1.6;margin-bottom:4px;">${line}</p>`;
+    } else if (line.startsWith('- **Timeline**:')) {
+      html += `<p style="font-size:13px;color:var(--pink);line-height:1.6;margin-bottom:4px;">${line}</p></div>`;
+    } else if (line.startsWith('- **')) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:4px;">${line}</p>`;
+    } else if (line.startsWith('- ')) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:4px;margin-left:12px;">${line}</p>`;
+    } else if (line.trim()) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:8px;">${line}</p>`;
+    }
+  }
+  html += '</div></div>';
+
+  dirDiv.innerHTML = html;
+  dirDiv.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+let reviewContent = '';
+let directionsContent = '';
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
