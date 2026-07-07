@@ -260,7 +260,7 @@ async function searchPapers() {
 
   try {
     // Use Netlify function as CORS proxy (always reliable)
-    const resp = await fetch('/.netlify/functions/search-papers', {
+    const resp = await fetch('https://researchscope.netlify.app/.netlify/functions/search-papers', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ topic })
@@ -372,7 +372,7 @@ async function generateReview() {
 
   // Try calling AI backend, fall back to template synthesis
   try {
-    const resp = await fetch('/.netlify/functions/lit-review', {
+    const resp = await fetch('https://researchscope.netlify.app/.netlify/functions/lit-review', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
