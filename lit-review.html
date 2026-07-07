@@ -259,22 +259,15 @@ async function searchPapers() {
   area.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>Searching arXiv & Semantic Scholar…</p></div>';
 
   try {
-    // Fetch from arXiv
-    const arxivQuery = encodeURIComponent(`all:${topic}`);
-    const arxivUrl = `${ARXIV_API}?search_query=${arxivQuery}&start=0&max_results=15&sortBy=relevance`;
-    const arxivResp = await fetch(arxivUrl);
-    const arxivText = await arxivResp.text();
-    const arxivPapers = parseArxivXML(arxivText);
-
-    // Fetch from Semantic Scholar
-    const semUrl = `${SEMANTIC_API}?query=${encodeURIComponent(topic)}&limit=10&fields=title,authors,year,abstract,url,externalIds`;
-    const semResp = await fetch(semUrl);
-    const semData = await semResp.json();
-    const semPapers = parseSemanticData(semData);
-
-    // Merge & deduplicate
-    const allPapers = mergePapers(arxivPapers, semPapers);
-    papers = allPapers.slice(0, 25);
+    // Use Netlify function as CORS proxy (always reliable)
+    const resp = await fetch('/.netlify/functions/search-papers', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ topic })
+    });
+    if (!resp.ok) throw new Error('Search failed');
+    const data = await resp.json();
+    papers = data.papers || [];
 
     if (papers.length === 0) {
       area.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>No papers found</h3><p>Try a different topic or broader keywords</p></div>';
