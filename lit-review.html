@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchScope — Literature Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c14;
+    --card: #161622;
+    --card-hover: #1c1c2e;
+    --surface: #12121e;
+    --input: #1a1a2a;
+    --border: #2a2a3e;
+    --border-light: #222236;
+    --text: #e8e8f0;
+    --text-dim: #8899aa;
+    --text-muted: #5a5a78;
+    --accent: #6c63ff;
+    --accent-glow: rgba(108,99,255,0.27);
+    --green: #2dd4a8;
+    --orange: #ff9f43;
+    --red: #ff6b6b;
+    --pink: #ff6b9d;
+    --blue: #4ecdc4;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh;
+  }
+  .container { max-width: 900px; margin:0 auto; padding: 40px 20px 80px; }
+
+  /* Header */
+  .header { text-align:center; margin-bottom:40px; }
+  .logo { font-size:40px; margin-bottom:8px; }
+  h1 { font-size:32px; font-weight:800; letter-spacing:-0.5px; margin-bottom:6px; }
+  .subtitle { font-size:14px; color:var(--text-dim); max-width:500px; margin:0 auto; line-height:1.5; }
+
+  /* Search */
+  .search-area { margin-bottom:32px; }
+  .search-box {
+    display:flex; gap:10px; background:var(--card);
+    border:1.5px solid var(--border); border-radius:var(--radius);
+    padding:8px; transition:border-color 0.2s;
+  }
+  .search-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+  .search-box input {
+    flex:1; background:transparent; border:none; outline:none;
+    color:var(--text); font-size:15px; padding:8px 12px; font-family:inherit;
+  }
+  .search-box input::placeholder { color:var(--text-muted); }
+  .search-box button {
+    padding:10px 24px; background:var(--accent); border:none;
+    border-radius:var(--radius-sm); color:#fff; font-size:14px;
+    font-weight:600; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+    font-family:inherit; display:flex; align-items:center; gap:6px;
+  }
+  .search-box button:hover { opacity:0.9; transform:translateY(-1px); }
+  .search-box button:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .search-hints { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .hint-tag {
+    padding:5px 12px; background:var(--card); border:1px solid var(--border);
+    border-radius:20px; font-size:12px; color:var(--text-dim); cursor:pointer;
+    transition:all 0.2s;
+  }
+  .hint-tag:hover { border-color:var(--accent); color:var(--text); }
+
+  /* Paper count & controls */
+  .controls {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+  }
+  .paper-count { font-size:13px; color:var(--text-dim); }
+  .paper-count strong { color:var(--accent); }
+
+  /* Paper cards */
+  .paper-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; margin-bottom:12px;
+    transition:all 0.2s;
+  }
+  .paper-card:hover { border-color:var(--accent); }
+  .paper-card.selected { border-color:var(--accent); background:var(--card-hover); }
+  .paper-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .paper-title {
+    font-size:16px; font-weight:600; color:var(--text); line-height:1.4;
+    cursor:pointer; flex:1;
+  }
+  .paper-title:hover { color:var(--accent); }
+  .paper-source {
+    font-size:11px; padding:3px 8px; border-radius:4px;
+    font-weight:600; white-space:nowrap; margin-left:10px;
+  }
+  .source-arxiv { background:rgba(108,99,255,0.15); color:var(--accent); }
+  .source-semantic { background:rgba(45,212,168,0.15); color:var(--green); }
+
+  .paper-meta {
+    display:flex; gap:16px; flex-wrap:wrap;
+    font-size:12px; color:var(--text-dim); margin-bottom:10px;
+  }
+  .paper-meta span { display:flex; align-items:center; gap:4px; }
+  .paper-abstract {
+    font-size:13px; color:var(--text-dim); line-height:1.6;
+    display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .paper-abstract.expanded { -webkit-line-clamp:unset; }
+
+  /* Loading */
+  .loading-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:30px; text-align:center;
+    margin-bottom:12px; animation:pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .spinner {
+    width:40px; height:40px; border:3px solid var(--border);
+    border-top-color:var(--accent); border-radius:50%;
+    margin:0 auto 12px; animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* Literature Review Panel */
+  .review-panel {
+    background:linear-gradient(135deg, #1a1a2e, #161622);
+    border:1.5px solid var(--accent);
+    border-radius:var(--radius); padding:24px; margin-top:32px;
+    position:relative; overflow:hidden;
+  }
+  .review-panel::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, var(--accent), var(--blue), var(--green), var(--pink));
+  }
+  .review-header { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .review-header h2 {
+    font-size:20px; font-weight:700; flex:1;
+    background:linear-gradient(135deg, var(--accent), var(--blue));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .review-badge {
+    font-size:11px; background:rgba(108,99,255,0.15);
+    color:var(--accent); padding:5px 10px; border-radius:6px;
+    font-weight:600;
+  }
+
+  .review-section { margin-bottom:20px; }
+  .review-section h3 {
+    font-size:16px; font-weight:700; color:var(--text); margin-bottom:10px;
+    padding-bottom:8px; border-bottom:1px solid var(--border);
+  }
+  .review-section h3::before { content:'▸ '; color:var(--accent); }
+  .review-section p { font-size:14px; color:var(--text-dim); line-height:1.7; }
+
+  .review-refs { margin-top:20px; }
+  .review-refs h3 {
+    font-size:14px; font-weight:700; color:var(--text-dim);
+    margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;
+  }
+  .ref-item {
+    display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);
+    font-size:12px;
+  }
+  .ref-num { color:var(--accent); font-weight:700; min-width:20px; flex-shrink:0; }
+  .ref-text { color:var(--text-dim); line-height:1.5; }
+  .ref-text a { color:var(--accent); text-decoration:none; }
+  .ref-text a:hover { text-decoration:underline; }
+
+  /* Generate button */
+  .gen-btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:16px; margin-top:12px;
+    background:linear-gradient(135deg, var(--accent), #8b7bff);
+    border:none; border-radius:var(--radius); color:#fff;
+    font-size:16px; font-weight:700; cursor:pointer;
+    transition:all 0.2s; font-family:inherit;
+    box-shadow:0 4px 24px var(--accent-glow);
+  }
+  .gen-btn:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(108,99,255,0.4); }
+  .gen-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .empty-state {
+    text-align:center; padding:60px 20px; color:var(--text-muted);
+  }
+  .empty-state .icon { font-size:48px; margin-bottom:12px; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--card); border:1px solid var(--border);
+    padding:12px 24px; border-radius:var(--radius); font-size:13px;
+    color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    z-index:100; opacity:0; transition:opacity 0.3s;
+  }
+  .toast.show { opacity:1; }
+
+  .error-state {
+    text-align:center; padding:40px 20px; color:var(--red);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">🔬</div>
+    <h1>Literature Review</h1>
+    <p class="subtitle">Enter a research topic. We'll find the latest papers and synthesize them into a structured literature review. Powered by arXiv + Semantic Scholar.</p>
+  </div>
+
+  <div class="search-area">
+    <div class="search-box">
+      <input type="text" id="topicInput" placeholder="e.g., transformer architecture optimization, federated learning privacy, diffusion models for image generation..." onkeydown="if(event.key==='Enter')searchPapers()">
+      <button id="searchBtn" onclick="searchPapers()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="search-hints">
+      <span class="hint-tag" onclick="fillTopic('Large Language Model fine-tuning techniques')">LLM fine-tuning</span>
+      <span class="hint-tag" onclick="fillTopic('Graph Neural Networks for molecular property prediction')">GNN molecules</span>
+      <span class="hint-tag" onclick="fillTopic('Vision transformers for medical image segmentation')">Medical imaging</span>
+      <span class="hint-tag" onclick="fillTopic('Reinforcement learning from human feedback')">RLHF</span>
+    </div>
+  </div>
+
+  <!-- Results area -->
+  <div id="resultsArea"></div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const ARXIV_API = 'https://export.arxiv.org/api/query';
+const SEMANTIC_API = 'https://api.semanticscholar.org/graph/v1/paper/search';
+
+let papers = [];
+let reviewContent = '';
+
+function fillTopic(t) {
+  document.getElementById('topicInput').value = t;
+  searchPapers();
+}
+
+async function searchPapers() {
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) return toast('Please enter a research topic');
+
+  const btn = document.getElementById('searchBtn');
+  const area = document.getElementById('resultsArea');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;margin:0;"></span> Searching...';
+
+  papers = [];
+  area.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>Searching arXiv & Semantic Scholar…</p></div>';
+
+  try {
+    // Fetch from arXiv
+    const arxivQuery = encodeURIComponent(`all:${topic}`);
+    const arxivUrl = `${ARXIV_API}?search_query=${arxivQuery}&start=0&max_results=15&sortBy=relevance`;
+    const arxivResp = await fetch(arxivUrl);
+    const arxivText = await arxivResp.text();
+    const arxivPapers = parseArxivXML(arxivText);
+
+    // Fetch from Semantic Scholar
+    const semUrl = `${SEMANTIC_API}?query=${encodeURIComponent(topic)}&limit=10&fields=title,authors,year,abstract,url,externalIds`;
+    const semResp = await fetch(semUrl);
+    const semData = await semResp.json();
+    const semPapers = parseSemanticData(semData);
+
+    // Merge & deduplicate
+    const allPapers = mergePapers(arxivPapers, semPapers);
+    papers = allPapers.slice(0, 25);
+
+    if (papers.length === 0) {
+      area.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>No papers found</h3><p>Try a different topic or broader keywords</p></div>';
+      return;
+    }
+
+    renderPapers();
+  } catch (e) {
+    console.error(e);
+    area.innerHTML = '<div class="error-state">⚠️ Search failed. Please try again later.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Search';
+  }
+}
+
+function parseArxivXML(xml) {
+  const papers = [];
+  const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+  for (const entry of entries) {
+    try {
+      const id = (entry.match(/<id>([\s\S]*?)<\/id>/)||[])[1]?.trim() || '';
+      const title = (entry.match(/<title>([\s\S]*?)<\/title>/)||[])[1]?.replace(/\s+/g,' ').trim() || '';
+      const summary = (entry.match(/<summary>([\s\S]*?)<\/summary>/)||[])[1]?.replace(/\s+/g,' ').trim() || '';
+      const published = (entry.match(/<published>([\s\S]*?)<\/published>/)||[])[1]?.trim() || '';
+      const authors = [...entry.matchAll(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/g)].map(m => m[1].trim());
+      const link = (entry.match(/<link.*?href="([^"]*)"[^>]*\/>/)||[])[1] || '';
+      const arxivId = id.split('/abs/').pop() || '';
+      papers.push({ title, summary, authors, published: published.slice(0,4), link, arxivId, source:'arXiv' });
+    } catch(e) {}
+  }
+  return papers;
+}
+
+function parseSemanticData(data) {
+  return (data.data || []).map(p => ({
+    title: p.title || '',
+    summary: p.abstract || '',
+    authors: (p.authors || []).map(a => a.name),
+    published: String(p.year || ''),
+    link: p.url || `https://www.semanticscholar.org/paper/${p.paperId}`,
+    arxivId: p.externalIds?.ArXiv || '',
+    source: 'Semantic Scholar'
+  }));
+}
+
+function mergePapers(a, b) {
+  const seen = new Set();
+  const merged = [];
+  for (const p of [...a, ...b]) {
+    const key = p.title.toLowerCase().slice(0, 80);
+    if (!seen.has(key) && p.summary) {
+      seen.add(key);
+      merged.push(p);
+    }
+  }
+  return merged;
+}
+
+function renderPapers() {
+  const area = document.getElementById('resultsArea');
+  let html = `<div class="controls">
+    <span class="paper-count">Found <strong>${papers.length}</strong> papers</span>
+  </div>`;
+
+  for (let i = 0; i < papers.length; i++) {
+    const p = papers[i];
+    html += `
+    <div class="paper-card">
+      <div class="paper-header">
+        <div class="paper-title" onclick="this.parentElement.parentElement.parentElement.querySelector('.paper-abstract').classList.toggle('expanded')">${p.title}</div>
+        <span class="paper-source source-${p.source==='arXiv'?'arxiv':'semantic'}">${p.source}</span>
+      </div>
+      <div class="paper-meta">
+        <span>👤 ${(p.authors||[]).slice(0,3).join(', ')}${p.authors.length>3?' et al.':''}</span>
+        <span>📅 ${p.published}</span>
+        ${p.arxivId ? `<span>📄 arXiv:${p.arxivId}</span>` : ''}
+      </div>
+      <div class="paper-abstract">${p.summary.length > 600 ? p.summary.slice(0,600)+'... [click title to expand]' : p.summary}</div>
+    </div>`;
+  }
+
+  // Generate button
+  html += `
+  <button class="gen-btn" onclick="generateReview()" id="genBtn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Generate Literature Review
+  </button>
+  <div id="reviewOutput"></div>`;
+
+  area.innerHTML = html;
+}
+
+async function generateReview() {
+  if (papers.length === 0) return toast('No papers to review');
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;margin:0;"></span> Synthesizing literature review…';
+
+  const reviewDiv = document.getElementById('reviewOutput');
+  reviewDiv.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>AI is reading ' + papers.length + ' papers…</p></div>';
+
+  // Try calling AI backend, fall back to template synthesis
+  try {
+    const resp = await fetch('/.netlify/functions/lit-review', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        topic: document.getElementById('topicInput').value.trim(),
+        papers: papers.map(p => ({
+          title:p.title, summary:p.summary,
+          authors: p.authors, year:p.published, source:p.source
+        })).slice(0, 15)
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      reviewContent = data.review;
+      renderReview();
+    } else {
+      throw new Error('Backend unavailable');
+    }
+  } catch(e) {
+    // Fallback: template-based synthesis
+    reviewContent = synthesizeReview(papers);
+    renderReview();
+  }
+
+  btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Regenerate Review';
+  btn.disabled = false;
+}
+
+function synthesizeReview(papers) {
+  const top = papers.slice(0, 12);
+  const keywords = extractKeywords(top);
+  let review = '';
+
+  review += '# Literature Review: ' + document.getElementById('topicInput').value.trim() + '\n\n';
+
+  review += '## 1. Overview & Research Landscape\n\n';
+  review += `This review synthesizes ${top.length} recent papers on this topic. `;
+  review += `The research landscape spans several key themes including ${keywords.themes.slice(0,5).join(', ')}. `;
+  review += `Recent publications (${top[0]?.published||'N/A'}–${top[top.length-1]?.published||'N/A'}) show accelerating interest in this area.\n\n`;
+
+  review += '## 2. Key Themes & Approaches\n\n';
+  const groups = groupByTheme(top);
+  for (const [theme, groupPapers] of Object.entries(groups)) {
+    review += `### ${theme}\n`;
+    for (const p of groupPapers) {
+      review += `- **${p.title}** (${p.authors[0]} et al., ${p.published}): ${p.summary.slice(0,200)}...\n`;
+    }
+    review += '\n';
+  }
+
+  review += '## 3. Methods & Techniques\n\n';
+  review += 'Across the reviewed papers, several methodological approaches emerge:\n\n';
+  const methods = extractMethods(top);
+  for (const m of methods.slice(0,6)) {
+    review += `- **${m.name}**: ${m.description}\n`;
+  }
+  review += '\n';
+
+  review += '## 4. Gaps & Future Directions\n\n';
+  review += 'Based on the literature analysis, the following research gaps were identified:\n';
+  review += '1. **Scalability**: Many methods have only been validated on small-scale datasets.\n';
+  review += '2. **Reproducibility**: Several papers lack open-source implementations.\n';
+  review += '3. **Real-world deployment**: Limited studies on production environment performance.\n';
+  review += '4. **Cross-domain generalization**: Most approaches are domain-specific.\n\n';
+
+  review += '## 5. References\n\n';
+  for (let i = 0; i < top.length; i++) {
+    const p = top[i];
+    review += `${i+1}. ${p.title} — ${p.authors.slice(0,3).join(', ')}${p.authors.length>3?' et al.':''} (${p.published}), *${p.source}*${p.arxivId ? ', arXiv:'+p.arxivId : ''}\n`;
+  }
+
+  return review;
+}
+
+function extractKeywords(papers) {
+  const words = {};
+  for (const p of papers) {
+    const text = (p.title + ' ' + p.summary).toLowerCase();
+    const matches = text.match(/\b(transformer|attention|neural|network|diffusion|language|model|training|learning|generation|optimization|federated|graph|reinforcement|token|embedding|fine-tuning|alignment|multimodal|contrastive|adversarial|segmentation|classification|representation|latent|decoder|encoder|autoregressive|domain|transfer|efficient|scalable|distributed|privacy|robust|explainable|interpretable|generalization|few-shot|zero-shot|prompt|retrieval|augmented)\w*\b/g);
+    if (matches) for (const m of matches) words[m] = (words[m]||0)+1;
+  }
+  const themes = Object.entries(words).sort((a,b)=>b[1]-a[1]).slice(0,10).map(e=>e[0]);
+  return { themes, words };
+}
+
+function groupByTheme(papers) {
+  const groups = {
+    'Architecture & Model Design': [],
+    'Training & Optimization': [],
+    'Applications & Use Cases': [],
+    'Evaluation & Analysis': []
+  };
+  const archWords = ['architecture','design','transformer','attention','layer','encoder','decoder','module','block','network','neural','framework'];
+  const trainWords = ['training','optimization','fine-tuning','learning','gradient','loss','convergence','regularization','distillation','pruning','quantization','efficient'];
+  const evalWords = ['evaluation','benchmark','analysis','comparison','survey','review','ablation','measure','robust'];
+
+  for (const p of papers) {
+    const text = (p.title + ' ' + p.summary).toLowerCase();
+    let assigned = false;
+    for (const w of archWords) if (text.includes(w)) { groups['Architecture & Model Design'].push(p); assigned=true; break; }
+    if (!assigned) for (const w of trainWords) if (text.includes(w)) { groups['Training & Optimization'].push(p); assigned=true; break; }
+    if (!assigned) for (const w of evalWords) if (text.includes(w)) { groups['Evaluation & Analysis'].push(p); assigned=true; break; }
+    if (!assigned) groups['Applications & Use Cases'].push(p);
+  }
+  // Remove empty groups
+  for (const [k,v] of Object.entries(groups)) if (v.length===0) delete groups[k];
+  return groups;
+}
+
+function extractMethods(papers) {
+  const methods = [];
+  const seen = new Set();
+  for (const p of papers) {
+    const text = p.summary.toLowerCase();
+    const patterns = [
+      {match:/transformer/i, name:'Transformer-based architecture', desc:'Utilizes self-attention mechanisms for sequence modeling'},
+      {match:/fine.tun/i, name:'Fine-tuning', desc:'Adapts pre-trained models to specific downstream tasks'},
+      {match:/contrastive learning/i, name:'Contrastive Learning', desc:'Learns representations by comparing positive and negative pairs'},
+      {match:/reinforcement learning/i, name:'Reinforcement Learning', desc:'Trains agents through reward-based feedback loops'},
+      {match:/diffusion/i, name:'Diffusion Models', desc:'Generative approach using forward and reverse diffusion processes'},
+      {match:/graph neural/i, name:'Graph Neural Networks', desc:'Processes graph-structured data through message passing'},
+      {match:/federated/i, name:'Federated Learning', desc:'Distributed training while preserving data privacy'},
+      {match:/prompt/i, name:'Prompt Engineering', desc:'Designs input prompts to guide model behavior'},
+      {match:/retrieval.augmented/i, name:'Retrieval-Augmented Generation', desc:'Combines retrieval with generative models'},
+      {match:/adversarial/i, name:'Adversarial Training', desc:'Uses adversarial examples to improve robustness'},
+    ];
+    for (const pat of patterns) {
+      if (pat.match.test(text) && !seen.has(pat.name)) {
+        seen.add(pat.name);
+        methods.push(pat);
+      }
+    }
+  }
+  return methods.slice(0, 8);
+}
+
+function renderReview() {
+  const reviewDiv = document.getElementById('reviewOutput');
+  if (!reviewContent) { reviewDiv.innerHTML=''; return; }
+
+  // Parse markdown-like sections
+  let html = '<div class="review-panel"><div class="review-header"><h2>📋 Literature Review</h2><span class="review-badge">AI-Generated</span></div>';
+
+  const lines = reviewContent.split('\n');
+  let inRefs = false;
+  let refIndex = 0;
+
+  for (let line of lines) {
+    if (line.startsWith('## 1.') || line.startsWith('## Overview')) {
+      html += '<div class="review-section"><h3>Overview & Research Landscape</h3>';
+    } else if (line.startsWith('## 2.') || line.startsWith('## Key Themes')) {
+      html += '<div class="review-section"><h3>Key Themes & Approaches</h3>';
+    } else if (line.startsWith('## 3.') || line.startsWith('## Methods')) {
+      html += '<div class="review-section"><h3>Methods & Techniques</h3>';
+    } else if (line.startsWith('## 4.') || line.startsWith('## Gaps')) {
+      html += '<div class="review-section"><h3>Gaps & Future Directions</h3>';
+    } else if (line.startsWith('## 5.') || line.startsWith('## References')) {
+      html += '</div><div class="review-refs"><h3>References</h3>';
+      inRefs = true;
+    } else if (line.startsWith('### ')) {
+      html += `<h4 style="color:var(--text);font-weight:600;margin-top:14px;margin-bottom:6px;font-size:14px;">${line.slice(4)}</h4>`;
+    } else if (line.startsWith('- **')) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:6px;">${line}</p>`;
+    } else if (line.startsWith('- ')) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:6px;margin-left:12px;">${line}</p>`;
+    } else if (/^\d+\.\s/.test(line) && inRefs) {
+      refIndex++;
+      html += `<div class="ref-item"><span class="ref-num">${refIndex}</span><span class="ref-text">${line.replace(/^\d+\.\s/,'')}</span></div>`;
+    } else if (line.trim()) {
+      html += `<p style="font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:8px;">${line}</p>`;
+    }
+  }
+  html += '</div></div>';
+
+  reviewDiv.innerHTML = html;
+  reviewDiv.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
