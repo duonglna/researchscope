@@ -443,6 +443,48 @@ function synthesizeReview(papers) {
     review += `${i+1}. ${p.title} — ${p.authors.slice(0,3).join(', ')}${p.authors.length>3?' et al.':''} (${p.published}), *${p.source}*${p.arxivId ? ', arXiv:'+p.arxivId : ''}\n`;
   }
 
+  review += '\n## 6. Research Directions & Next Steps\n\n';
+  review += 'Based on this literature analysis, here are recommended directions and a roadmap for your research:\n\n';
+
+  review += '### Suggested Research Directions\n\n';
+  review += '1. **Novel Hybrid Architecture**: Combine strengths from different methodological categories identified above. For example, integrate attention mechanisms with graph-based approaches for improved performance.\n';
+  review += '2. **Efficiency & Scalability**: Focus on making existing methods more computationally efficient while maintaining performance. Pruning, distillation, and quantization are promising paths.\n';
+  review += '3. **Cross-domain Transfer**: Develop methods that generalize across domains rather than being specialized for a single task.\n';
+  review += '4. **Robustness & Interpretability**: Address the gap between performance and trustworthiness. Develop methods that are both accurate and explainable.\n';
+  review += '5. **Real-world Benchmarking**: Create standardized benchmarks that reflect real-world conditions rather than controlled settings.\n\n';
+
+  review += '### Step-by-Step Research Roadmap\n\n';
+  review += '**Phase 1: Deep Dive (Weeks 1-3)**\n';
+  review += '- Read the top 10 papers in detail (not just abstracts)\n';
+  review += '- Build a comparison matrix of methods vs. datasets vs. metrics\n';
+  review += '- Identify the most cited papers and understand why\n';
+  review += '- Join relevant research communities (Discord, Slack, conferences)\n\n';
+
+  review += '**Phase 2: Problem Formulation (Weeks 3-5)**\n';
+  review += '- Based on gaps identified, narrow down to 2-3 specific research questions\n';
+  review += '- Validate novelty: search recent preprints and conference proceedings\n';
+  review += '- Discuss with advisors/peers to refine the scope\n';
+  review += '- Define clear success metrics and evaluation criteria\n\n';
+
+  review += '**Phase 3: Method Development (Weeks 5-12)**\n';
+  review += '- Start with a strong baseline implementation\n';
+  review += '- Develop your proposed method incrementally\n';
+  review += '- Run ablation studies to understand each component\n';
+  review += '- Compare against 3-5 strong baselines from the literature\n\n';
+
+  review += '**Phase 4: Writing & Submission (Weeks 12-16)**\n';
+  review += '- Structure: Introduction → Related Work → Method → Experiments → Conclusion\n';
+  review += '- Target venue: identify 2-3 conferences/journals (check deadlines)\n';
+  review += '- Get feedback from peers before submission\n';
+  review += '- Prepare code repository for reproducibility\n\n';
+
+  review += '### Quick Actions You Can Take Today\n\n';
+  review += '- 📥 Download and read the highest-impact paper from this review\n';
+  review += '- 📝 Create a research notebook (Notion/Obsidian) to track your notes\n';
+  review += '- 🔍 Search for open-source implementations of the top methods\n';
+  review += '- 💬 Discuss this literature review with your advisor or collaborators\n';
+  review += '- 📅 Set up alerts for new papers on this topic (Google Scholar, arXiv)\n';
+
   return review;
 }
 
@@ -712,6 +754,8 @@ function renderDirections() {
 
 let reviewContent = '';
 let directionsContent = '';
+
+function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');

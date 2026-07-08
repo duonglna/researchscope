@@ -1,5 +1,5 @@
 // Netlify Function: Research Directions Generator
-// Analyzes literature review + papers to suggest research directions and paper writing steps
+// Analyzes gaps in literature and suggests research directions + paper writing roadmap
 
 exports.handler = async (event) => {
   const headers = {
@@ -13,131 +13,58 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
   try {
     const { topic, papers, review } = JSON.parse(event.body);
-    
-    if (!topic || !papers || papers.length === 0) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Topic and papers are required' }) };
-    }
+    if (!topic || !papers) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Topic and papers required' }) };
 
-    const deepseekKey = process.env.DEEPSEEK_API_KEY;
-    const openaiKey = process.env.OPENAI_API_KEY;
-    
-    if (!deepseekKey && !openaiKey) {
-      return { 
-        statusCode: 501, 
-        headers, 
-        body: JSON.stringify({ 
-          error: 'No LLM API key configured.',
-          fallback: true
-        }) 
-      };
-    }
+    const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+    if (!apiKey) return { statusCode: 501, headers, body: JSON.stringify({ error: 'No LLM API key configured', fallback: true }) };
 
-    const papersText = papers.map((p, i) => 
-      `Paper ${i+1}: "${p.title}" by ${(p.authors||[]).slice(0,3).join(', ')} (${p.year})\nAbstract: ${p.summary}`
-    ).join('\n\n');
+    const papersText = papers.map((p,i) => `Paper ${i+1}: "${p.title}" (${p.year}) - ${(p.summary||'').slice(0,300)}`).join('\n');
 
-    const reviewContext = review ? `\n\nLITERATURE REVIEW ALREADY GENERATED:\n${review}` : '';
-
-    const prompt = `You are a senior research advisor helping a graduate student plan their next research paper. Based on the following research topic, paper abstracts, and literature review analysis, provide actionable research directions and a concrete paper writing roadmap.
+    const prompt = `You are a research advisor. Based on this literature review and papers, suggest specific research directions and a paper writing roadmap.
 
 TOPIC: ${topic}
 
-PAPERS ANALYZED:
+KEY PAPERS:
 ${papersText}
-${reviewContext}
 
-Please provide TWO sections in Markdown:
+LITERATURE REVIEW SUMMARY:
+${(review||'').slice(0,2000)}
 
-## 🎯 Research Directions
+Please provide:
+1. 4 specific research directions with:
+   - Title
+   - Gap being addressed
+   - Proposed approach
+   - Novelty factor
+   - Difficulty level
+   - Timeline estimate
 
-Suggest 3-5 specific, novel research directions that could become a publishable paper. For each direction:
-- **Title**: A potential paper title
-- **Gap**: What gap in the current literature this addresses
-- **Approach**: Suggested methodology (2-3 sentences)
-- **Novelty**: What makes this different from existing work
-- **Difficulty**: Easy / Medium / Hard
-- **Estimated timeline**: How long to complete
+2. A 12-week paper writing roadmap with 5 phases
 
-Prioritize directions that are:
-1. Novel (not just incremental improvements)
-2. Feasible for a graduate student
-3. Have clear evaluation metrics
-4. Address real gaps identified in the literature
+Format in Markdown with ## and ### headings. Use 🎯 for directions and 📝 for the roadmap.`;
 
-## 📝 Paper Writing Roadmap
+    const url = process.env.DEEPSEEK_API_KEY ? 'https://api.deepseek.com/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+    const model = process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'gpt-3.5-turbo';
 
-Provide a step-by-step guide for writing a research paper based on the analyzed literature:
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        temperature: 0.7
+      })
+    });
+    const data = await resp.json();
+    const directions = data.choices?.[0]?.message?.content || 'Error generating directions';
 
-### Phase 1: Preparation (Week 1-2)
-- Literature deep-dive (specific papers to read, what to look for)
-- Research question formulation
-- Hypothesis development
-
-### Phase 2: Methodology (Week 3-4)
-- Experiment design
-- Dataset selection/creation
-- Baseline models to compare against
-
-### Phase 3: Execution (Week 5-8)
-- Implementation plan
-- Experiment timeline
-- Expected results and fallback plans
-
-### Phase 4: Writing (Week 9-11)
-- Paper structure (Introduction → Related Work → Method → Experiments → Conclusion)
-- Key figures and tables to include
-- Target venues (conferences/journals) with deadlines
-
-### Phase 5: Submission (Week 12)
-- Final review checklist
-- Common rejection reasons to avoid
-- Rebuttal preparation tips
-
-Be specific and reference the actual papers analyzed. Make suggestions actionable and concrete.`;
-
-    let result;
-    if (openaiKey) {
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 3000,
-          temperature: 0.7
-        })
-      });
-      const data = await resp.json();
-      result = data.choices?.[0]?.message?.content || 'Error generating directions';
-    } else if (deepseekKey) {
-      const resp = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 3000,
-          temperature: 0.7
-        })
-      });
-      const data = await resp.json();
-      result = data.choices?.[0]?.message?.content || 'Error generating directions';
-    }
-
-    return { statusCode: 200, headers, body: JSON.stringify({ directions: result }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ directions }) };
 
   } catch (error) {
     console.error('Research directions error:', error);
-    return { 
-      statusCode: 500, 
-      headers, 
-      body: JSON.stringify({ error: error.message, fallback: true })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message, fallback: true }) };
   }
 };
